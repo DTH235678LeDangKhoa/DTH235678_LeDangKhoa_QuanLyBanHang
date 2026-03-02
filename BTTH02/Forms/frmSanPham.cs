@@ -39,7 +39,6 @@ namespace BTTH02.Forms
             btnXoa.Enabled = !giaTri;
             btnTimKiem.Enabled = !giaTri;
             btnNhap.Enabled = !giaTri;
-            btnXuat.Enabled = !giaTri;
         }
         public void LayLoaiSanPhamVaoComboBox()
         {
@@ -180,15 +179,13 @@ namespace BTTH02.Forms
                 frmSanPham_Load(sender, e);
             }
         }
-
+        //Về nhà tự thêm coede dô nhA
         private void btnHuyBo_Click(object sender, EventArgs e)
-        {
-            frmSanPham_Load(sender, e);
-        }
+        {        }
 
         private void btnThoat_Click(object sender, EventArgs e)
         {
-
+            this.Close();  
         }
 
         private void btnTimKiem_Click(object sender, EventArgs e)
@@ -200,12 +197,6 @@ namespace BTTH02.Forms
         {
 
         }
-
-        private void btnXuat_Click(object sender, EventArgs e)
-        {
-
-        }
-
         private void btnDoiAnh_Click(object sender, EventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();

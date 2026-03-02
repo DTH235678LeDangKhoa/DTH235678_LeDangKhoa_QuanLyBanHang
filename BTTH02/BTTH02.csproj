@@ -18,7 +18,6 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.12" />
-    <PackageReference Include="NET451.Microsoft.Extensions.DependencyInjection.Abstractions" Version="2.0.2" />
   </ItemGroup>
 
   <ItemGroup>
