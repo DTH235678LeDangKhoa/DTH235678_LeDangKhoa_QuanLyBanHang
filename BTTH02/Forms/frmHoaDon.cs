@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 ﻿using System;
+=======
+﻿using QuanLyBanHang.Data;
+using QuanLyBanHang.Data.Entity;
+using System;
+>>>>>>> c6ee281d673705ebf1dd91506a80d4f895d8f502
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -12,9 +18,67 @@ namespace BTTH02.Forms
 {
     public partial class frmHoaDon : Form
     {
+<<<<<<< HEAD
+=======
+        QLBHDbContext context = new QLBHDbContext(); // Khởi tạo biến ngữ cảnh CSDL
+        int id;
+>>>>>>> c6ee281d673705ebf1dd91506a80d4f895d8f502
         public frmHoaDon()
         {
             InitializeComponent();
         }
+<<<<<<< HEAD
+=======
+
+        private void frmHoaDon_Load(object sender, EventArgs e)
+        {
+            dataGridView.AutoGenerateColumns = false;
+            List<DanhSachHoaDon> hd = new List<DanhSachHoaDon>();
+            hd = context.HoaDon.Select(r => new DanhSachHoaDon
+            {
+                ID = r.ID,
+                NhanVienID = r.NhanVienID,
+                HoVaTenNhanVien = r.NhanVien.HoVaTen,
+                KhachHangID = r.KhachHangID,
+                HoVaTenKhachHang = r.KhachHang.HoVaTen,
+                NgayLap = r.NgayLap,
+                GhiChuHoaDon = r.GhiChuHoaDon,
+                TongTienHoaDon = r.HoaDon_ChiTiet.Sum(r => r.SoLuongBan * r.DonGiaBan),
+                XemChiTiet = "Xem chi tiết"
+            }).ToList();
+            dataGridView.DataSource = hd;
+        }
+
+        private void btnLapHoaDon_Click(object sender, EventArgs e)
+        {
+            using (frmHoaDon_ChiTiet chiTiet = new frmHoaDon_ChiTiet())
+            {
+                chiTiet.ShowDialog();
+            }
+        }
+
+        private void btnSua_Click(object sender, EventArgs e)
+        {
+            id = Convert.ToInt32(dataGridView.CurrentRow.Cells["ID"].Value.ToString());
+            using (frmHoaDon_ChiTiet chiTiet = new frmHoaDon_ChiTiet(id))
+            {
+                chiTiet.ShowDialog();
+            }
+        }
+
+        private void btnXoa_Click(object sender, EventArgs e)
+        {
+            id = Convert.ToInt32(dataGridView.CurrentRow.Cells["ID"].Value.ToString());
+            var hoadon = context.HoaDon.Find(id);
+            if(hoadon != null)
+            {
+                context.HoaDon.Remove(hoadon);
+            }
+            context.SaveChanges();
+            frmHoaDon_Load(sender, e);
+
+
+        }
+>>>>>>> c6ee281d673705ebf1dd91506a80d4f895d8f502
     }
 }

@@ -28,8 +28,13 @@
         /// </summary>
         private void InitializeComponent()
         {
+<<<<<<< HEAD
             DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
             DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
+=======
+            DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle4 = new DataGridViewCellStyle();
+>>>>>>> c6ee281d673705ebf1dd91506a80d4f895d8f502
             dataGridView = new DataGridView();
             ID = new DataGridViewTextBoxColumn();
             TenLoai = new DataGridViewTextBoxColumn();
@@ -133,8 +138,13 @@
             // DonGia
             // 
             DonGia.DataPropertyName = "DonGia";
+<<<<<<< HEAD
             dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleRight;
             DonGia.DefaultCellStyle = dataGridViewCellStyle1;
+=======
+            dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleRight;
+            DonGia.DefaultCellStyle = dataGridViewCellStyle3;
+>>>>>>> c6ee281d673705ebf1dd91506a80d4f895d8f502
             DonGia.FillWeight = 137.061386F;
             DonGia.HeaderText = "Đơn giá";
             DonGia.MinimumWidth = 6;
@@ -143,8 +153,13 @@
             // HinhAnh
             // 
             HinhAnh.DataPropertyName = "HinhAnh";
+<<<<<<< HEAD
             dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleRight;
             HinhAnh.DefaultCellStyle = dataGridViewCellStyle2;
+=======
+            dataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleRight;
+            HinhAnh.DefaultCellStyle = dataGridViewCellStyle4;
+>>>>>>> c6ee281d673705ebf1dd91506a80d4f895d8f502
             HinhAnh.FillWeight = 137.061386F;
             HinhAnh.HeaderText = "Hình ảnh";
             HinhAnh.MinimumWidth = 6;
@@ -345,16 +360,26 @@
             // 
             // numDonGia
             // 
+<<<<<<< HEAD
             numDonGia.Location = new Point(874, 107);
             numDonGia.Margin = new Padding(5, 5, 5, 5);
+=======
+            numDonGia.Location = new Point(538, 67);
+            numDonGia.Maximum = new decimal(new int[] { 1000000000, 0, 0, 0 });
+>>>>>>> c6ee281d673705ebf1dd91506a80d4f895d8f502
             numDonGia.Name = "numDonGia";
             numDonGia.Size = new Size(328, 39);
             numDonGia.TabIndex = 25;
             // 
             // numSoLuong
             // 
+<<<<<<< HEAD
             numSoLuong.Location = new Point(874, 51);
             numSoLuong.Margin = new Padding(5, 5, 5, 5);
+=======
+            numSoLuong.Location = new Point(538, 32);
+            numSoLuong.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
+>>>>>>> c6ee281d673705ebf1dd91506a80d4f895d8f502
             numSoLuong.Name = "numSoLuong";
             numSoLuong.Size = new Size(328, 39);
             numSoLuong.TabIndex = 24;
