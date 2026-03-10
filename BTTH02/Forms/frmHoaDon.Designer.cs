@@ -28,18 +28,9 @@
         /// </summary>
         private void InitializeComponent()
         {
-<<<<<<< HEAD
-            this.components = new System.ComponentModel.Container();
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
-            this.Text = "frmHoaDon";
-        }
-
-        #endregion
-=======
-            DataGridViewCellStyle dataGridViewCellStyle4 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle5 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle6 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle7 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle8 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle9 = new DataGridViewCellStyle();
             dataGridView = new DataGridView();
             ID = new DataGridViewTextBoxColumn();
             HoVaTenNhanVien = new DataGridViewTextBoxColumn();
@@ -56,6 +47,7 @@
             btnXoa = new Button();
             btnSua = new Button();
             btnLapHoaDon = new Button();
+            btnNhap = new Button();
             ((System.ComponentModel.ISupportInitialize)dataGridView).BeginInit();
             groupBox2.SuspendLayout();
             SuspendLayout();
@@ -103,8 +95,8 @@
             // NgayLap
             // 
             NgayLap.DataPropertyName = "NgayLap";
-            dataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.TopCenter;
-            NgayLap.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle7.Alignment = DataGridViewContentAlignment.TopCenter;
+            NgayLap.DefaultCellStyle = dataGridViewCellStyle7;
             NgayLap.FillWeight = 113.582886F;
             NgayLap.HeaderText = "Ngày lập";
             NgayLap.MinimumWidth = 6;
@@ -113,9 +105,9 @@
             // TongTienHoaDon
             // 
             TongTienHoaDon.DataPropertyName = "TongTienHoaDon";
-            dataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.TopRight;
-            dataGridViewCellStyle5.ForeColor = Color.Blue;
-            TongTienHoaDon.DefaultCellStyle = dataGridViewCellStyle5;
+            dataGridViewCellStyle8.Alignment = DataGridViewContentAlignment.TopRight;
+            dataGridViewCellStyle8.ForeColor = Color.Blue;
+            TongTienHoaDon.DefaultCellStyle = dataGridViewCellStyle8;
             TongTienHoaDon.FillWeight = 113.582886F;
             TongTienHoaDon.HeaderText = "Tổng tiền";
             TongTienHoaDon.MinimumWidth = 6;
@@ -124,8 +116,8 @@
             // XemChiTiet
             // 
             XemChiTiet.DataPropertyName = "XemChiTiet";
-            dataGridViewCellStyle6.Alignment = DataGridViewContentAlignment.TopCenter;
-            XemChiTiet.DefaultCellStyle = dataGridViewCellStyle6;
+            dataGridViewCellStyle9.Alignment = DataGridViewContentAlignment.TopCenter;
+            XemChiTiet.DefaultCellStyle = dataGridViewCellStyle9;
             XemChiTiet.FillWeight = 113.582886F;
             XemChiTiet.HeaderText = "Chi tiết";
             XemChiTiet.MinimumWidth = 6;
@@ -148,12 +140,13 @@
             // 
             // btnXuat
             // 
-            btnXuat.Location = new Point(856, 433);
+            btnXuat.Location = new Point(974, 433);
             btnXuat.Name = "btnXuat";
             btnXuat.Size = new Size(112, 36);
             btnXuat.TabIndex = 11;
             btnXuat.Text = "Xuất Excel...";
             btnXuat.UseVisualStyleBackColor = true;
+            btnXuat.Click += btnXuat_Click;
             // 
             // btnInHoaDon
             // 
@@ -212,11 +205,22 @@
             btnLapHoaDon.UseVisualStyleBackColor = true;
             btnLapHoaDon.Click += btnLapHoaDon_Click;
             // 
+            // btnNhap
+            // 
+            btnNhap.Location = new Point(856, 433);
+            btnNhap.Name = "btnNhap";
+            btnNhap.Size = new Size(112, 36);
+            btnNhap.TabIndex = 12;
+            btnNhap.Text = "Nhập";
+            btnNhap.UseVisualStyleBackColor = true;
+            btnNhap.Click += btnNhap_Click;
+            // 
             // frmHoaDon
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1162, 485);
+            Controls.Add(btnNhap);
             Controls.Add(groupBox2);
             Controls.Add(btnXoa);
             Controls.Add(btnLapHoaDon);
@@ -250,6 +254,6 @@
         private DataGridViewTextBoxColumn NgayLap;
         private DataGridViewTextBoxColumn TongTienHoaDon;
         private DataGridViewTextBoxColumn XemChiTiet;
->>>>>>> c6ee281d673705ebf1dd91506a80d4f895d8f502
+        private Button btnNhap;
     }
 }
