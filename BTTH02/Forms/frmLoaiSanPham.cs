@@ -1,4 +1,5 @@
-﻿using QuanLyBanHang.Data;
+﻿using ClosedXML.Excel;
+using Microsoft.EntityFrameworkCore;
 using QuanLyBanHang.Data.Entity;
 using System;
 using System.Collections.Generic;
@@ -7,22 +8,21 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using ClosedXML.Excel;
 
 namespace QuanLyBanHang.Forms
 {
-
     public partial class frmLoaiSanPham : Form
     {
-        QLBHDbContext context = new QLBHDbContext();
-        bool xuLyThem = false;
-        int id;
+        QLBHDbContext context = new QLBHDbContext(); // Khởi tạo biến ngữ cảnh CSDL
+        bool xuLyThem = false; // Kiểm tra có nhấn vào nút Thêm hay không?
+        int id; // Lấy mã loại sản phẩm (dùng cho Sửa và Xóa)
+
         public frmLoaiSanPham()
         {
             InitializeComponent();
         }
+
         private void BatTatChucNang(bool giaTri)
         {
             btnLuu.Enabled = giaTri;
@@ -32,36 +32,45 @@ namespace QuanLyBanHang.Forms
             btnSua.Enabled = !giaTri;
             btnXoa.Enabled = !giaTri;
         }
+
         private void frmLoaiSanPham_Load(object sender, EventArgs e)
         {
             BatTatChucNang(false);
-            List<LoaiSanPham> lsp = new List<LoaiSanPham>();
-            lsp = context.LoaiSanPham.ToList();
+            List<LoaiSanPham> lsp = context.LoaiSanPham.ToList();
             BindingSource bindingSource = new BindingSource();
             bindingSource.DataSource = lsp;
+
             txtTenLoai.DataBindings.Clear();
             txtTenLoai.DataBindings.Add("Text", bindingSource, "TenLoai", false, DataSourceUpdateMode.Never);
-            dataGridView.DataSource = bindingSource;
+            dgvLoaiSanPham.DataSource = bindingSource;
         }
 
         private void btnThem_Click(object sender, EventArgs e)
         {
+            // Đã sửa lỗi: Bật tính năng để nhập liệu
             xuLyThem = true;
             BatTatChucNang(true);
-            txtTenLoai.Clear();
+            txtTenLoai.DataBindings.Clear(); // Xóa ràng buộc dữ liệu cũ để nhập mới
+            txtTenLoai.Text = ""; // Làm rỗng Textbox
+            txtTenLoai.Focus(); // Đưa con trỏ chuột vào Textbox
         }
 
         private void btnSua_Click(object sender, EventArgs e)
         {
             xuLyThem = false;
             BatTatChucNang(true);
-            id = Convert.ToInt32(dataGridView.CurrentRow.Cells["ID"].Value.ToString());
+            if (dgvLoaiSanPham.CurrentRow != null)
+            {
+                id = Convert.ToInt32(dgvLoaiSanPham.CurrentRow.Cells["ID"].Value.ToString());
+            }
         }
 
         private void btnLuu_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtTenLoai.Text))
+            {
                 MessageBox.Show("Vui lòng nhập tên loại sản phẩm?", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
             else
             {
                 if (xuLyThem)
@@ -81,6 +90,7 @@ namespace QuanLyBanHang.Forms
                         context.SaveChanges();
                     }
                 }
+                // Sau khi lưu xong thì load lại dữ liệu
                 frmLoaiSanPham_Load(sender, e);
             }
         }
@@ -89,14 +99,17 @@ namespace QuanLyBanHang.Forms
         {
             if (MessageBox.Show("Xác nhận xóa loại sản phẩm?", "Xóa", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
-                id = Convert.ToInt32(dataGridView.CurrentRow.Cells["ID"].Value.ToString());
-                LoaiSanPham lsp = context.LoaiSanPham.Find(id);
-                if (lsp != null)
+                if (dgvLoaiSanPham.CurrentRow != null)
                 {
-                    context.LoaiSanPham.Remove(lsp);
+                    id = Convert.ToInt32(dgvLoaiSanPham.CurrentRow.Cells["ID"].Value.ToString());
+                    LoaiSanPham lsp = context.LoaiSanPham.Find(id);
+                    if (lsp != null)
+                    {
+                        context.LoaiSanPham.Remove(lsp);
+                        context.SaveChanges();
+                    }
+                    frmLoaiSanPham_Load(sender, e);
                 }
-                context.SaveChanges();
-                frmLoaiSanPham_Load(sender, e);
             }
         }
 
@@ -107,8 +120,9 @@ namespace QuanLyBanHang.Forms
 
         private void btnThoat_Click(object sender, EventArgs e)
         {
-            Close();
+            this.Close(); // Đổi thành this.Close() để đóng form hiện tại thay vì tắt toàn bộ ứng dụng (Application.Exit)
         }
+
         private void btnNhap_Click(object sender, EventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
@@ -168,6 +182,7 @@ namespace QuanLyBanHang.Forms
                 }
             }
         }
+
         private void btnXuat_Click(object sender, EventArgs e)
         {
             SaveFileDialog saveFileDialog = new SaveFileDialog();
@@ -180,9 +195,8 @@ namespace QuanLyBanHang.Forms
                 {
                     DataTable table = new DataTable();
                     table.Columns.AddRange(new DataColumn[2] {
-                        new DataColumn("ID", typeof(int)),
-                        new DataColumn("TenLoai", typeof(string))
-                    });
+new DataColumn("ID", typeof(int)),new DataColumn("TenLoai", typeof(string))
+});
                     var loaiSanPham = context.LoaiSanPham.ToList();
                     if (loaiSanPham != null)
                     {
@@ -205,3 +219,4 @@ namespace QuanLyBanHang.Forms
         }
     }
 }
+        

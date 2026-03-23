@@ -2,248 +2,270 @@
 using Microsoft.EntityFrameworkCore;
 using QuanLyBanHang.Data;
 using QuanLyBanHang.Data.Entity;
+using QuanLyBanHang.Reports;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using System.Drawing;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace BTTH02.Forms
+namespace QuanLyBanHang.Forms
 {
     public partial class frmHoaDon : Form
     {
-        QLBHDbContext context = new QLBHDbContext(); // Khởi tạo biến ngữ cảnh CSDL
+        // Khởi tạo ngữ cảnh CSDL
+        QLBHDbContext context = new QLBHDbContext();
         int id;
+
         public frmHoaDon()
         {
             InitializeComponent();
+
+            // Đăng ký các sự kiện
+            this.Load += frmHoaDon_Load;
+            this.btnLapHoaDon.Click += btnLapHoaDon_Click;
+            this.btnSua.Click += btnSua_Click;
+            this.btnXoa.Click += btnXoa_Click;
+            this.btnThoat.Click += btnThoat_Click;
+            this.dgvHoaDon.CellContentClick += dgvHoaDon_CellContentClick;
+            this.btnNhap.Click += btnNhap_Click;
+            this.btnXuat.Click += btnXuat_Click;
         }
 
-        private void frmHoaDon_Load(object sender, EventArgs e)
-        {
-            dataGridView.AutoGenerateColumns = false;
-            List<DanhSachHoaDon> hd = new List<DanhSachHoaDon>();
-            hd = context.HoaDon.Select(r => new DanhSachHoaDon
-            {
-                ID = r.ID,
-                NhanVienID = r.NhanVienID,
-                HoVaTenNhanVien = r.NhanVien.HoVaTen,
-                KhachHangID = r.KhachHangID,
-                HoVaTenKhachHang = r.KhachHang.HoVaTen,
-                NgayLap = r.NgayLap,
-                GhiChuHoaDon = r.GhiChuHoaDon,
-                TongTienHoaDon = r.HoaDon_ChiTiet.Sum(r => r.SoLuongBan * r.DonGiaBan),
-                XemChiTiet = "Xem chi tiết"
-            }).ToList();
-            dataGridView.DataSource = hd;
-        }
+        private void frmHoaDon_Load(object sender, EventArgs e) => LoadData();
 
-        private void btnLapHoaDon_Click(object sender, EventArgs e)
+        private void LoadData()
         {
-            using (frmHoaDon_ChiTiet chiTiet = new frmHoaDon_ChiTiet())
+            try
             {
-                chiTiet.ShowDialog();
+                dgvHoaDon.AutoGenerateColumns = false;
+                var hd = context.HoaDon
+                    .Include(x => x.NhanVien)
+                    .Include(x => x.KhachHang)
+                    .Include(x => x.HoaDon_ChiTiet)
+                    .Select(r => new
+                    {
+                        ID = r.ID,
+                        // Đã lấy mã nhân viên và mã khách hàng
+                        MaNhanVien = r.NhanVienID,
+                        MaKhachHang = r.KhachHangID,
+                        NgayLap = r.NgayLap,
+                        TongTien = r.HoaDon_ChiTiet.Sum(ct => (double)ct.SoLuongBan * ct.DonGiaBan),
+                        XemChiTiet = "Xem chi tiết"
+                    }).ToList();
+
+                dgvHoaDon.DataSource = hd;
+
+                // [ĐÃ SỬA] Ép buộc gán DataPropertyName theo đúng thứ tự cột trên giao diện
+                if (dgvHoaDon.Columns.Count >= 6)
+                {
+                    dgvHoaDon.Columns[0].DataPropertyName = "ID";           // Cột 1: ID
+                    dgvHoaDon.Columns[1].DataPropertyName = "MaNhanVien";   // Cột 2: Mã nhân viên
+                    dgvHoaDon.Columns[2].DataPropertyName = "MaKhachHang";  // Cột 3: Mã khách hàng
+                    dgvHoaDon.Columns[3].DataPropertyName = "NgayLap";      // Cột 4: Ngày lập
+                    dgvHoaDon.Columns[4].DataPropertyName = "TongTien";     // Cột 5: Tổng tiền
+                    dgvHoaDon.Columns[5].DataPropertyName = "XemChiTiet";   // Cột 6: Xem chi tiết
+                }
+
+                // Định dạng hiển thị số tiền cho cột Tổng tiền (cột số 4 tính từ 0)
+                if (dgvHoaDon.Columns.Count >= 5)
+                {
+                    dgvHoaDon.Columns[4].DefaultCellStyle.Format = "N0";
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi tải dữ liệu: " + ex.Message, "Lỗi");
             }
         }
 
-        private void btnSua_Click(object sender, EventArgs e)
-        {
-            id = Convert.ToInt32(dataGridView.CurrentRow.Cells["ID"].Value.ToString());
-            using (frmHoaDon_ChiTiet chiTiet = new frmHoaDon_ChiTiet(id))
-            {
-                chiTiet.ShowDialog();
-            }
-        }
-
-        private void btnXoa_Click(object sender, EventArgs e)
-        {
-            id = Convert.ToInt32(dataGridView.CurrentRow.Cells["ID"].Value.ToString());
-            var hoadon = context.HoaDon.Find(id);
-            if (hoadon != null)
-            {
-                context.HoaDon.Remove(hoadon);
-            }
-            context.SaveChanges();
-            frmHoaDon_Load(sender, e);
-
-
-        }
-
+        #region XỬ LÝ NHẬP EXCEL
         private void btnNhap_Click(object sender, EventArgs e)
         {
-            OpenFileDialog openFileDialog = new OpenFileDialog();
-            openFileDialog.Title = "Nhập dữ liệu từ tập tin Excel";
-            openFileDialog.Filter = "Tập tin Excel|*.xls;*.xlsx";
-            openFileDialog.Multiselect = false;
+            OpenFileDialog openFileDialog = new OpenFileDialog { Filter = "Excel Files|*.xlsx;*.xls" };
+
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
                 try
                 {
-                    DataTable hdTable = new DataTable();
-                    DataTable hdctTable = new DataTable();
-                    using (XLWorkbook workbook = new XLWorkbook(openFileDialog.FileName))
+                    using (var stream = new FileStream(openFileDialog.FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                     {
-                        IXLWorksheet hdWorksheet = workbook.Worksheet(1);
-                        IXLWorksheet hdctWorkSheet = workbook.Worksheet(2);
-                        bool firstRow = true;
-                        string readRange = "1:1";
-                        // Sheet hóa đơn
-                        foreach (IXLRow row in hdWorksheet.RowsUsed())
+                        using (XLWorkbook workbook = new XLWorkbook(stream))
                         {
-                            // Đọc dòng tiêu đề (dòng đầu tiên)
-                            if (firstRow)
+                            var hdSheet = workbook.Worksheet("HoaDon");
+                            var hdctSheet = workbook.Worksheet("HoaDon_ChiTiet");
+
+                            DataTable dtHoaDon = WorksheetToDataTable(hdSheet);
+                            DataTable dtChiTiet = WorksheetToDataTable(hdctSheet);
+
+                            foreach (DataRow r in dtHoaDon.Rows)
                             {
-                                readRange = string.Format("{0}:{1}", 1, row.LastCellUsed().Address.ColumnNumber);
-                                foreach (IXLCell cell in row.Cells(readRange))
-                                    hdTable.Columns.Add(cell.Value.ToString());
-                                firstRow = false;
-                            }
-                            else // Đọc các dòng nội dung (các dòng tiếp theo)
-                            {
-                                hdTable.Rows.Add();
-                                int cellIndex = 0;
-                                foreach (IXLCell cell in row.Cells(readRange))
+                                string tenNV = r["NhanVien"].ToString().Trim();
+                                string tenKH = r["KhachHang"].ToString().Trim();
+                                string excelID = r["ID"].ToString();
+
+                                var nv = context.NhanVien.FirstOrDefault(x => x.HoVaTen == tenNV);
+                                var kh = context.KhachHang.FirstOrDefault(x => x.HoVaTen == tenKH);
+
+                                if (nv == null || kh == null) continue;
+
+                                HoaDon hd = new HoaDon
                                 {
-                                    hdTable.Rows[hdTable.Rows.Count - 1][cellIndex] = cell.Value.ToString();
-                                    cellIndex++;
-                                }
-                            }
-                        }
-                        // Sheet hóa đơn chi tiết
-                        firstRow = true;
-                        readRange = "1:1";
-                        foreach (IXLRow row in hdctWorkSheet.RowsUsed())
-                        {
-                            // Đọc dòng tiêu đề (dòng đầu tiên)
-                            if (firstRow)
-                            {
-                                readRange = string.Format("{0}:{1}", 1, row.LastCellUsed().Address.ColumnNumber);
-                                foreach (IXLCell cell in row.Cells(readRange))
-                                    hdctTable.Columns.Add(cell.Value.ToString());
-                                firstRow = false;
-                            }
-                            else // Đọc các dòng nội dung (các dòng tiếp theo)
-                            {
-                                hdctTable.Rows.Add();
-                                int cellIndex = 0;
-                                foreach (IXLCell cell in row.Cells(readRange))
+                                    NhanVienID = nv.ID,
+                                    KhachHangID = kh.ID,
+                                    NgayLap = DateTime.TryParse(r["NgayLap"].ToString(), out var d) ? d : DateTime.Now
+                                };
+
+                                var chiTiets = dtChiTiet.AsEnumerable().Where(x => x["ID"].ToString() == excelID);
+                                foreach (var ct in chiTiets)
                                 {
-                                    hdctTable.Rows[hdctTable.Rows.Count - 1][cellIndex] = cell.Value.ToString();
-                                    cellIndex++;
-                                }
-                            }
-                        }
-                        if (hdTable.Rows.Count > 0)
-                        {
-                            foreach (DataRow r in hdTable.Rows)
-                            {
-                                var nv = context.NhanVien
-                                    .FirstOrDefault(x => x.HoVaTen == r["NhanVien"].ToString());
-
-                                var kh = context.KhachHang
-                                    .FirstOrDefault(x => x.HoVaTen == r["KhachHang"].ToString());
-
-                                HoaDon hd = new HoaDon();
-                                hd.NhanVienID = nv.ID;
-                                hd.KhachHangID = kh.ID;
-                                hd.NgayLap = Convert.ToDateTime(r["NgayLap"]);
-
-                                var hdct = hdctTable.AsEnumerable().Where(x => Convert.ToInt32(x["ID"]) == Convert.ToInt32(r["ID"]));
-
-                                foreach (var ct in hdct)
-                                {
-                                    var sp = context.SanPham
-                                        .FirstOrDefault(x => x.TenSanPham == ct["TenSanPham"].ToString());
-
-                                    hd.HoaDon_ChiTiet.Add(new HoaDon_ChiTiet
+                                    var sp = context.SanPham.FirstOrDefault(x => x.TenSanPham == ct["TenSanPham"].ToString().Trim());
+                                    if (sp != null)
                                     {
-                                        SanPhamID = sp.ID,
-                                        SoLuongBan = Convert.ToInt32(ct["SoLuongBan"]),
-                                        DonGiaBan = Convert.ToInt32(ct["DonGiaBan"])
-                                    });
+                                        hd.HoaDon_ChiTiet.Add(new HoaDon_ChiTiet
+                                        {
+                                            SanPhamID = sp.ID,
+                                            SoLuongBan = (short)Convert.ToInt32(ct["SoLuongBan"]),
+                                            DonGiaBan = Convert.ToInt32(ct["DonGiaBan"])
+                                        });
+                                    }
                                 }
-
                                 context.HoaDon.Add(hd);
                             }
                             context.SaveChanges();
-                            MessageBox.Show("Đã nhập thành công " + hdTable.Rows.Count + " dòng.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            frmHoaDon_Load(sender, e);
+                            MessageBox.Show("Nhập dữ liệu thành công!");
+                            LoadData();
                         }
-                        if (firstRow)
-                            MessageBox.Show("Tập tin Excel rỗng.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                     }
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                }
+                catch (Exception ex) { MessageBox.Show("Lỗi nhập: " + ex.Message); }
             }
         }
+        #endregion
+
+        #region XỬ LÝ XUẤT EXCEL
         private void btnXuat_Click(object sender, EventArgs e)
         {
-            SaveFileDialog saveFileDialog = new SaveFileDialog();
-            saveFileDialog.Title = "Xuất dữ liệu ra tập tin Excel";
-            saveFileDialog.Filter = "Tập tin Excel|*.xls;*.xlsx";
-            saveFileDialog.FileName = "HoaDon_" + DateTime.Now.ToShortDateString().Replace("/", "_") + ".xlsx";
-            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            SaveFileDialog sfd = new SaveFileDialog { Filter = "Excel Files|*.xlsx", FileName = "BaoCaoHoaDon.xlsx" };
+            if (sfd.ShowDialog() == DialogResult.OK)
             {
                 try
                 {
-                    // Hóa đơn
-                    DataTable hdTable = new DataTable();
-                    hdTable.Columns.AddRange(new DataColumn[5] {
-                        new DataColumn("ID", typeof(int)),
-                        new DataColumn("NhanVien", typeof(string)),
-                        new DataColumn("KhachHang", typeof(string)),
-                        new DataColumn("NgayLap", typeof(DateTime)),
-                        new DataColumn("TongTien", typeof(int)),
-                    });
-                    var hoaDon = context.HoaDon
-                        .Include(x => x.NhanVien)
-                        .Include(x => x.KhachHang)
-                        .Include(x => x.HoaDon_ChiTiet)
-                        .ToList();
-                    if (hoaDon != null)
-                    {
-                        foreach (var p in hoaDon)
-                            hdTable.Rows.Add(p.ID, p.NhanVien.HoVaTen, p.KhachHang.HoVaTen, p.NgayLap, Convert.ToInt32(p.HoaDon_ChiTiet.Sum(r => r.SoLuongBan * r.DonGiaBan)));
-                    }
-
-                    // Hóa đơn chi tiết
-                    DataTable hdctTable = new DataTable();
-                    hdctTable.Columns.AddRange(new DataColumn[5] {
-                        new DataColumn("ID", typeof(int)),
-                        new DataColumn("TenSanPham", typeof(string)),
-                        new DataColumn("SoLuongBan", typeof(int)),
-                        new DataColumn("DonGiaBan", typeof(int)),
-                        new DataColumn("ThanhTien", typeof(int)),
-                    });
-                    var hoaDonChiTiet = context.HoaDon_ChiTiet.Include(x => x.SanPham).ToList();
-                    if (hoaDonChiTiet != null)
-                    {
-                        foreach (var p in hoaDonChiTiet)
-                            hdctTable.Rows.Add(p.ID, p.SanPham.TenSanPham, p.SoLuongBan, p.DonGiaBan, Convert.ToInt32(p.SoLuongBan * p.DonGiaBan));
-                    }
-
                     using (XLWorkbook wb = new XLWorkbook())
                     {
-                        var sheet1 = wb.Worksheets.Add(hdTable, "HoaDon");
-                        var sheet2 = wb.Worksheets.Add(hdctTable, "HoaDonChiTiet");
-                        sheet1.Columns().AdjustToContents();
-                        sheet2.Columns().AdjustToContents();
-                        wb.SaveAs(saveFileDialog.FileName);
-                        MessageBox.Show("Đã xuất dữ liệu ra tập tin Excel thành công.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                        var hdData = context.HoaDon.Select(h => new
+                        {
+                            ID = h.ID,
+                            NhanVien = h.NhanVien.HoVaTen,
+                            KhachHang = h.KhachHang.HoVaTen,
+                            NgayLap = h.NgayLap,
+                            TongTien = h.HoaDon_ChiTiet.Sum(c => (double)c.SoLuongBan * c.DonGiaBan)
+                        }).ToList();
+                        wb.Worksheets.Add(ToDataTable(hdData), "HoaDon");
+
+                        var ctData = context.HoaDon_ChiTiet.Select(c => new
+                        {
+                            ID = c.HoaDonID,
+                            TenSanPham = c.SanPham.TenSanPham,
+                            SoLuongBan = c.SoLuongBan,
+                            DonGiaBan = c.DonGiaBan
+                        }).ToList();
+                        wb.Worksheets.Add(ToDataTable(ctData), "HoaDon_ChiTiet");
+
+                        wb.SaveAs(sfd.FileName);
+                        MessageBox.Show("Xuất file thành công!");
                     }
                 }
-                catch (Exception ex)
+                catch (Exception ex) { MessageBox.Show("Lỗi xuất: " + ex.Message); }
+            }
+        }
+        #endregion
+
+        // Helper
+        private DataTable ToDataTable<T>(List<T> items)
+        {
+            DataTable dt = new DataTable(typeof(T).Name);
+            var props = typeof(T).GetProperties();
+            foreach (var prop in props) dt.Columns.Add(prop.Name, Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType);
+            foreach (var item in items)
+            {
+                var values = new object[props.Length];
+                for (int i = 0; i < props.Length; i++) values[i] = props[i].GetValue(item, null);
+                dt.Rows.Add(values);
+            }
+            return dt;
+        }
+
+        private DataTable WorksheetToDataTable(IXLWorksheet worksheet)
+        {
+            DataTable dt = new DataTable();
+            var range = worksheet.RangeUsed();
+            bool firstRow = true;
+            foreach (var row in range.Rows())
+            {
+                if (firstRow)
                 {
-                    MessageBox.Show(ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                    foreach (var cell in row.Cells()) dt.Columns.Add(cell.Value.ToString().Trim());
+                    firstRow = false;
+                }
+                else
+                {
+                    DataRow dr = dt.NewRow();
+                    for (int i = 0; i < dt.Columns.Count; i++) dr[i] = row.Cell(i + 1).Value.ToString().Trim();
+                    dt.Rows.Add(dr);
+                }
+            }
+            return dt;
+        }
+
+        private void btnThoat_Click(object sender, EventArgs e) => this.Close();
+
+        private void btnXoa_Click(object sender, EventArgs e)
+        {
+            if (dgvHoaDon.CurrentRow != null && int.TryParse(dgvHoaDon.CurrentRow.Cells[0].Value?.ToString(), out id))
+            {
+                if (MessageBox.Show("Xác nhận xóa?", "Thông báo", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                {
+                    var h = context.HoaDon.Include(x => x.HoaDon_ChiTiet).FirstOrDefault(x => x.ID == id);
+                    if (h != null) { context.HoaDon.Remove(h); context.SaveChanges(); LoadData(); }
                 }
             }
         }
+
+        private void btnLapHoaDon_Click(object sender, EventArgs e)
+        {
+            using (frmHoaDon_ChiTiet f = new frmHoaDon_ChiTiet()) { f.ShowDialog(); LoadData(); }
+        }
+
+        private void btnSua_Click(object sender, EventArgs e)
+        {
+            if (dgvHoaDon.CurrentRow != null && int.TryParse(dgvHoaDon.CurrentRow.Cells[0].Value?.ToString(), out id))
+            {
+                using (frmHoaDon_ChiTiet f = new frmHoaDon_ChiTiet(id)) { f.ShowDialog(); LoadData(); }
+            }
+        }
+
+        private void dgvHoaDon_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            // Kiểm tra click vào cột Xem chi tiết (cột số 5)
+            if (e.RowIndex >= 0 && e.ColumnIndex == 5)
+            {
+                id = Convert.ToInt32(dgvHoaDon.Rows[e.RowIndex].Cells[0].Value);
+                using (frmHoaDon_ChiTiet f = new frmHoaDon_ChiTiet(id)) { f.ShowDialog(); LoadData(); }
+            }
+        }
+
+        private void btnInHoaDon_Click(object sender, EventArgs e)
+        {
+            
+        {
+            id = Convert.ToInt32(dgvHoaDon.CurrentRow.Cells["ID"].Value.ToString());
+            using (frmInHoaDon inHoaDon = new frmInHoaDon(id))
+            {
+                inHoaDon.ShowDialog();
+            }
+        }
+    }
     }
 }

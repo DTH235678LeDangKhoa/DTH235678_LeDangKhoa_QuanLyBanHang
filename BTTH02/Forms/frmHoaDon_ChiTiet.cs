@@ -1,70 +1,78 @@
 ﻿using QuanLyBanHang.Data.Entity;
-using QuanLyBanHang.Data;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
-using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace BTTH02.Forms
+namespace QuanLyBanHang.Forms
 {
     public partial class frmHoaDon_ChiTiet : Form
     {
         QLBHDbContext context = new QLBHDbContext();
-        int id;
+        int id; // ID hóa đơn
         BindingList<DanhSachHoaDon_ChiTiet> hoaDonChiTiet = new BindingList<DanhSachHoaDon_ChiTiet>();
+
         public frmHoaDon_ChiTiet(int maHoaDon = 0)
         {
             InitializeComponent();
             id = maHoaDon;
         }
+
+        #region Các hàm lấy dữ liệu
         public void LayNhanVienVaoComboBox()
         {
             cboNhanVien.DataSource = context.NhanVien.ToList();
             cboNhanVien.ValueMember = "ID";
             cboNhanVien.DisplayMember = "HoVaTen";
+            cboNhanVien.SelectedIndex = -1; // Không chọn mặc định
         }
+
         public void LayKhachHangVaoComboBox()
         {
             cboKhachHang.DataSource = context.KhachHang.ToList();
             cboKhachHang.ValueMember = "ID";
             cboKhachHang.DisplayMember = "HoVaTen";
+            cboKhachHang.SelectedIndex = -1;
         }
+
         public void LaySanPhamVaoComboBox()
         {
             cboSanPham.DataSource = context.SanPham.ToList();
             cboSanPham.ValueMember = "ID";
             cboSanPham.DisplayMember = "TenSanPham";
+            cboSanPham.SelectedIndex = -1;
         }
-        public void BatTatChucNang()
+        #endregion
+
+        private void BatTatChucNang()
         {
-            if (id == 0 && dataGridView.Rows.Count == 0)
-            {
-                cboKhachHang.Text = "";
-                cboNhanVien.Text = "";
-                cboSanPham.Text = "";
-                numSoLuongBan.Value = 1;
-                numDonGiaBan.Value = 0;
-            }
-            btnLuuHoaDon.Enabled = dataGridView.Rows.Count > 0;
-            btnXoa.Enabled = dataGridView.Rows.Count > 0;
+            // Nút lưu và in chỉ sáng khi có ít nhất 1 mặt hàng trong lưới
+            bool coDuLieu = dgvHoaDonChiTiet.Rows.Count > 0;
+            btnLuuHoaDon.Enabled = coDuLieu;
+            btnInHoaDon.Enabled = (id != 0 && coDuLieu); // Chỉ cho in nếu hóa đơn đã được lưu vào DB
+            btnXoa.Enabled = coDuLieu;
         }
+
         private void frmHoaDon_ChiTiet_Load(object sender, EventArgs e)
         {
             LayNhanVienVaoComboBox();
             LayKhachHangVaoComboBox();
             LaySanPhamVaoComboBox();
-            dataGridView.AutoGenerateColumns = false;
-            if (id != 0) // Đã tồn tại chi tiết
+            dgvHoaDonChiTiet.AutoGenerateColumns = false;
+
+            if (id != 0) // Chế độ Sửa
             {
-                var hoaDon = context.HoaDon.Where(r => r.ID == id).SingleOrDefault();
-                cboNhanVien.SelectedValue = hoaDon.NhanVienID;
-                cboKhachHang.SelectedValue = hoaDon.KhachHangID;
-                txtGhiChuHoaDon.Text = hoaDon.GhiChuHoaDon;
+                this.Text = "Chỉnh sửa hóa đơn mã: " + id;
+                var hoaDon = context.HoaDon.FirstOrDefault(r => r.ID == id);
+                if (hoaDon != null)
+                {
+                    cboNhanVien.SelectedValue = hoaDon.NhanVienID;
+                    cboKhachHang.SelectedValue = hoaDon.KhachHangID;
+                    txtGhiChuHoaDon.Text = hoaDon.GhiChuHoaDon;
+                }
+
                 var ct = context.HoaDon_ChiTiet.Where(r => r.HoaDonID == id).Select(r => new DanhSachHoaDon_ChiTiet
                 {
                     ID = r.ID,
@@ -77,118 +85,144 @@ namespace BTTH02.Forms
                 }).ToList();
                 hoaDonChiTiet = new BindingList<DanhSachHoaDon_ChiTiet>(ct);
             }
-            dataGridView.DataSource = hoaDonChiTiet;
+            else
+            {
+                this.Text = "Tạo mới hóa đơn";
+            }
+
+            dgvHoaDonChiTiet.DataSource = hoaDonChiTiet;
             BatTatChucNang();
         }
 
         private void btnXacNhanBan_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(cboSanPham.Text))
-                MessageBox.Show("Vui lòng chọn sản phẩm.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            else if (numSoLuongBan.Value <= 0)
-                MessageBox.Show("Số lượng bán phải lớn hơn 0.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            else if (numDonGiaBan.Value <= 0)
-                MessageBox.Show("Đơn giá bán sản phẩm phải lớn hơn 0.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (cboSanPham.SelectedValue == null)
             {
-                int maSanPham = Convert.ToInt32(cboSanPham.SelectedValue.ToString());
-                var chiTiet = hoaDonChiTiet.FirstOrDefault(x => x.SanPhamID == maSanPham);
-                // Nếu đã tồn tại sản phẩm thì cập nhật thông tin
-                if (chiTiet != null)
-                {
-                    chiTiet.SoLuongBan = Convert.ToInt32(numSoLuongBan.Value);
-                    chiTiet.DonGiaBan = Convert.ToInt32(numDonGiaBan.Value);
-                    chiTiet.ThanhTien = Convert.ToInt32(numSoLuongBan.Value * numDonGiaBan.Value);
-                    dataGridView.Refresh();
-                }
-                else // Nếu chưa có sản phẩm thì thêm vào
-                {
-                    // Nếu chưa có sản phẩm nào
-                    DanhSachHoaDon_ChiTiet ct = new DanhSachHoaDon_ChiTiet
-                    {
-                        ID = 0,
-                        HoaDonID = id,
-                        SanPhamID = maSanPham,
-                        TenSanPham = cboSanPham.Text,
-                        SoLuongBan = Convert.ToInt32(numSoLuongBan.Value),
-                        DonGiaBan = Convert.ToInt32(numDonGiaBan.Value),
-                        ThanhTien = Convert.ToInt32(numSoLuongBan.Value * numDonGiaBan.Value)
-                    };
-                    hoaDonChiTiet.Add(ct);
-                }
-                BatTatChucNang();
+                MessageBox.Show("Vui lòng chọn sản phẩm.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
-        }
-        private void btnXoa_Click(object sender, EventArgs e)
-        {
-            int maSanPham = Convert.ToInt32(dataGridView.CurrentRow.Cells["SanPhamID"].Value.ToString());
-            var chiTiet = hoaDonChiTiet.FirstOrDefault(x => x.SanPhamID == maSanPham);
-            if (chiTiet != null)
+
+            int maSanPham = (int)cboSanPham.SelectedValue;
+            var itemTonTai = hoaDonChiTiet.FirstOrDefault(x => x.SanPhamID == maSanPham);
+
+            if (itemTonTai != null)
             {
-                hoaDonChiTiet.Remove(chiTiet);
+                itemTonTai.SoLuongBan = (short)numSoLuongBan.Value;
+                itemTonTai.DonGiaBan = (int)numDonGiaBan.Value;
+                itemTonTai.ThanhTien = (int)(numSoLuongBan.Value * numDonGiaBan.Value);
+                dgvHoaDonChiTiet.Refresh();
+            }
+            else
+            {
+                hoaDonChiTiet.Add(new DanhSachHoaDon_ChiTiet
+                {
+                    SanPhamID = maSanPham,
+                    TenSanPham = cboSanPham.Text,
+                    SoLuongBan = (short)numSoLuongBan.Value,
+                    DonGiaBan = (int)numDonGiaBan.Value,
+                    ThanhTien = (int)(numSoLuongBan.Value * numDonGiaBan.Value)
+                });
             }
             BatTatChucNang();
         }
-        private void btnLuuHoaDon_Click(object sender, EventArgs e)
+
+        private void btnXoa_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(cboNhanVien.Text))
-                MessageBox.Show("Vui lòng chọn nhân viên lập hóa đơn.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            else if (string.IsNullOrWhiteSpace(cboKhachHang.Text))
-                MessageBox.Show("Vui lòng chọn khách hàng.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            else
+            if (dgvHoaDonChiTiet.CurrentRow != null)
             {
-                if (id != 0) // Đã tồn tại chi tiết thì chỉ cập nhật
-                {
-                    HoaDon hd = context.HoaDon.Find(id);
-                    if (hd != null)
-                    {
-                        hd.NhanVienID = Convert.ToInt32(cboNhanVien.SelectedValue.ToString());
-                        hd.KhachHangID = Convert.ToInt32(cboKhachHang.SelectedValue.ToString());
-                        hd.GhiChuHoaDon = txtGhiChuHoaDon.Text;
-                        context.HoaDon.Update(hd);// Xóa chi tiết cũ
-                        var old = context.HoaDon_ChiTiet.Where(r => r.HoaDonID == id).ToList();
-                        context.HoaDon_ChiTiet.RemoveRange(old);
-                        // Thêm lại chi tiết mới
-                        foreach (var item in hoaDonChiTiet.ToList())
-                        {
-                            HoaDon_ChiTiet ct = new HoaDon_ChiTiet();
-                            ct.HoaDonID = id;
-                            ct.SanPhamID = item.SanPhamID;
-                            ct.SoLuongBan = item.SoLuongBan;
-                            ct.DonGiaBan = item.DonGiaBan;
-                            context.HoaDon_ChiTiet.Add(ct);
-                        }
-                        context.SaveChanges();
-                    }
-                }
-                else // Thêm mới
-                {
-                    HoaDon hd = new HoaDon();
-                    hd.NhanVienID = Convert.ToInt32(cboNhanVien.SelectedValue.ToString());
-                    hd.KhachHangID = Convert.ToInt32(cboKhachHang.SelectedValue.ToString());
-                    hd.NgayLap = DateTime.Now;
-                    hd.GhiChuHoaDon = txtGhiChuHoaDon.Text;
-                    context.HoaDon.Add(hd);
-                    context.SaveChanges();
-                    // Thêm chi tiết
-                    foreach (var item in hoaDonChiTiet.ToList())
-                    {
-                        HoaDon_ChiTiet ct = new HoaDon_ChiTiet();
-                        ct.HoaDonID = hd.ID;
-                        ct.SanPhamID = item.SanPhamID;
-                        ct.SoLuongBan = item.SoLuongBan;
-                        ct.DonGiaBan = item.DonGiaBan;
-                        context.HoaDon_ChiTiet.Add(ct);
-                    }
-                    context.SaveChanges();
-                }
-                MessageBox.Show("Đã lưu thành công!", "Hoàn tất", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                var item = (DanhSachHoaDon_ChiTiet)dgvHoaDonChiTiet.CurrentRow.DataBoundItem;
+                hoaDonChiTiet.Remove(item);
+                BatTatChucNang();
             }
         }
+
+        private void btnLuuHoaDon_Click(object sender, EventArgs e)
+        {
+            if (cboNhanVien.SelectedValue == null || cboKhachHang.SelectedValue == null)
+            {
+                MessageBox.Show("Vui lòng nhập đầy đủ thông tin nhân viên và khách hàng.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            try
+            {
+                HoaDon hd;
+                if (id == 0) // Thêm mới
+                {
+                    hd = new HoaDon();
+                    hd.NgayLap = DateTime.Now;
+                    context.HoaDon.Add(hd);
+                }
+                else // Cập nhật
+                {
+                    hd = context.HoaDon.Find(id);
+                    // Xóa chi tiết cũ để ghi đè lại
+                    var details = context.HoaDon_ChiTiet.Where(x => x.HoaDonID == id);
+                    context.HoaDon_ChiTiet.RemoveRange(details);
+                }
+
+                hd.NhanVienID = (int)cboNhanVien.SelectedValue;
+                hd.KhachHangID = (int)cboKhachHang.SelectedValue;
+                hd.GhiChuHoaDon = txtGhiChuHoaDon.Text;
+
+                context.SaveChanges(); // Lưu để lấy ID nếu là thêm mới
+
+                // Thêm chi tiết mới
+                foreach (var item in hoaDonChiTiet)
+                {
+                    context.HoaDon_ChiTiet.Add(new HoaDon_ChiTiet
+                    {
+                        HoaDonID = hd.ID,
+                        SanPhamID = item.SanPhamID,
+                        SoLuongBan = item.SoLuongBan,
+                        DonGiaBan = item.DonGiaBan
+                    });
+                }
+                context.SaveChanges();
+                id = hd.ID; // Cập nhật lại id form sau khi lưu thành công
+
+                MessageBox.Show("Lưu hóa đơn thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                BatTatChucNang();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi lưu: " + ex.Message);
+            }
+        }
+
+        private void btnInHoaDon_Click(object sender, EventArgs e)
+        {
+            if (id == 0)
+            {
+                MessageBox.Show("Vui lòng lưu hóa đơn trước khi in!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            MessageBox.Show("Chức năng in đang được chuẩn bị. (Mã HD: " + id + ")", "In ấn", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            // Tại đây bạn có thể gọi Form Report hoặc xuất file Excel/PDF
+        }
+
+        private void btnThoat_Click(object sender, EventArgs e)
+        {
+            if (dgvHoaDonChiTiet.Rows.Count > 0)
+            {
+                DialogResult dr = MessageBox.Show("Dữ liệu chưa được lưu (nếu có thay đổi). Bạn có chắc muốn thoát?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (dr == DialogResult.No) return;
+            }
+            this.Close();
+        }
+
         private void cboSanPham_SelectionChangeCommitted(object sender, EventArgs e)
         {
-            int maSanPham = Convert.ToInt32(cboSanPham.SelectedValue.ToString());
-            var sanPham = context.SanPham.Find(maSanPham);
-            numDonGiaBan.Value = sanPham.DonGia;
+            if (cboSanPham.SelectedValue != null)
+            {
+                int maSP = (int)cboSanPham.SelectedValue;
+                var sp = context.SanPham.Find(maSP);
+                if (sp != null)
+                {
+                    numDonGiaBan.Value = sp.DonGia;
+                    numSoLuongBan.Value = 1;
+                }
+            }
         }
     }
 }
